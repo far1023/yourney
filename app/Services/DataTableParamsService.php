@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Contracts\DataTableParams;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
@@ -18,19 +19,34 @@ class DataTableParamsService implements DataTableParams
         $queryParams = $request->query();
 
         $invalidKeys = array_diff(array_keys($queryParams), $allowedKeys);
-        if (!empty($invalidKeys)) {
-            throw ValidationException::withMessages([
-                'params' => ['Invalid parameters: ' . implode(', ', $invalidKeys)]
-            ]);
-        }
 
         $validator = Validator::make($queryParams, [
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1',
         ]);
 
-        if ($validator->fails()) {
-            throw ValidationException::withMessages($validator->errors()->toArray());
+        if (!empty($invalidKeys) || $validator->fails()) {
+            $logData = [];
+
+            if (!empty($invalidKeys)) {
+                $invalidKeysData = [];
+                foreach ($invalidKeys as $key) {
+                    $invalidKeysData[$key] = $queryParams[$key];
+                }
+                $logData['invalid_keys'] = $invalidKeysData;
+            }
+
+            if ($validator->fails()) {
+                $validationErrors = [];
+
+                foreach ($validator->errors()->toArray() as $field => $errors) {
+                    $validationErrors[$field] = $queryParams[$field];
+                }
+
+                $logData['validation_errors'] = $validationErrors;
+            }
+
+            Log::channel('file')->notice('User DataTable params: Invalid query params', $logData);
         }
 
         $this->page = $request->has('page') ? (int) $request->query('page') : 1;
