@@ -6,7 +6,6 @@ use App\Contracts\DataTableParams;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
 
 class DataTableParamsService implements DataTableParams
 {
@@ -15,7 +14,7 @@ class DataTableParamsService implements DataTableParams
 
     public function __construct(Request $request)
     {
-        $allowedKeys = ['page', 'per_page'];
+        $allowedKeys = ['page', 'per_page', 'search'];
         $queryParams = $request->query();
 
         $invalidKeys = array_diff(array_keys($queryParams), $allowedKeys);
@@ -23,6 +22,7 @@ class DataTableParamsService implements DataTableParams
         $validator = Validator::make($queryParams, [
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1',
+            'search' => 'nullable|string',
         ]);
 
         if (!empty($invalidKeys) || $validator->fails()) {
@@ -46,7 +46,7 @@ class DataTableParamsService implements DataTableParams
                 $logData['validation_errors'] = $validationErrors;
             }
 
-            Log::channel('file')->notice('User DataTable params: Invalid query params', $logData);
+            defer(fn () => Log::channel('file')->info('User DataTable params: Invalid query params', $logData));
         }
 
         $this->page = $request->has('page') ? (int) $request->query('page') : 1;

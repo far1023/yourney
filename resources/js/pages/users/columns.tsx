@@ -5,7 +5,12 @@ import { MoreHorizontal } from 'lucide-react';
 import moment from 'moment';
 
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export type User = {
     id: string;
@@ -13,12 +18,16 @@ export type User = {
     email: string;
     created_at: string;
     updated_at: string;
+    row_number?: number;
 };
 
 export const columns: ColumnDef<User>[] = [
     {
-        accessorKey: 'id',
-        header: 'ID',
+        accessorKey: 'row_number',
+        header: '#',
+        size: 60,
+        enableResizing: false,
+        enableHiding: false,
     },
     {
         accessorKey: 'name',
@@ -29,15 +38,19 @@ export const columns: ColumnDef<User>[] = [
         header: 'Email',
     },
     {
-        accessorKey: 'created_at',
+        id: 'Last update',
+        accessorKey: 'updated_at',
         header: 'Last update',
         cell: ({ row }) => {
-            const date = row.getValue<string | Date>('created_at');
+            const date = row.getValue<string | Date>('updated_at');
             return moment(date).format('DD MMMM YYYY');
         },
     },
     {
         id: 'actions',
+        meta: {
+            align: 'right',
+        },
         cell: ({ row }) => {
             const user = row.original;
 
@@ -56,5 +69,6 @@ export const columns: ColumnDef<User>[] = [
                 </DropdownMenu>
             );
         },
+        enableHiding: false,
     },
 ];

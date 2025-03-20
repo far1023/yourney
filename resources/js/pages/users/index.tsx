@@ -1,15 +1,15 @@
 import { DataTable } from '@/components/datatable';
 import HeadingSmall from '@/components/heading-small';
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { useAppearance } from '@/hooks/use-appearance';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { DataTableResponse } from '@/types/datatable';
 import { Head } from '@inertiajs/react';
 import { PaginationState } from '@tanstack/react-table';
-import { ShieldX } from 'lucide-react';
+import { Loader, ShieldX } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast, Toaster } from 'sonner';
+import { useDebounce } from '../../hooks/use-debounce';
 import { columns, User } from './columns';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -19,8 +19,9 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-async function getData(page: number = 1): Promise<DataTableResponse> {
-    const response = await fetch(`/users?page=${page}`);
+async function getData(page: number = 1, search: string = ''): Promise<DataTableResponse> {
+    const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+    const response = await fetch(`/users?page=${page}${searchParam}`);
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -33,17 +34,19 @@ export default function Index() {
 
     const [data, setData] = useState<User[]>([]);
     const [pageCount, setPageCount] = useState(0);
+    const [searchQuery, setSearchQuery] = useState('');
+    const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
     const [pagination, setPagination] = useState<PaginationState>({
         pageIndex: 0,
         pageSize: 10,
     });
 
-    const fetchData = async (page: number) => {
+    const fetchData = async (page: number, search: string) => {
         setLoading(true);
 
         try {
-            const response = await getData(page);
+            const response = await getData(page, search);
             setData(response.data);
             setPageCount(response.last_page);
         } catch (err) {
@@ -67,8 +70,17 @@ export default function Index() {
 
     useEffect(() => {
         const pageIndex = pagination.pageIndex;
-        fetchData(pageIndex + 1);
-    }, [pagination]);
+        fetchData(pageIndex + 1, debouncedSearchQuery);
+    }, [pagination, debouncedSearchQuery]);
+
+    useEffect(() => {
+        if (debouncedSearchQuery !== searchQuery) {
+            setPagination((prev) => ({
+                ...prev,
+                pageIndex: 0,
+            }));
+        }
+    }, [debouncedSearchQuery]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -77,20 +89,27 @@ export default function Index() {
 
             <div className="container space-y-6 p-5">
                 <HeadingSmall title="User" description="Manage user data and profile" />
-                {!data.length ? (
-                    <div className="border-sidebar-border/70 dark:border-sidebar-border relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border md:min-h-min">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                ) : (
+
+                <div className="relative">
                     <DataTable
                         columns={columns}
                         data={data}
                         pageCount={pageCount}
                         pagination={pagination}
                         setPagination={setPagination}
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
                     />
-                )}
-                {loading ? 'loading...' : ''}
+
+                    {loading && data.length > 0 && (
+                        <div className="bg-background/80 absolute inset-0 flex items-center justify-center rounded-md">
+                            <div className="flex flex-col items-center space-y-2">
+                                <Loader className="animate-spin" />
+                                <p className="text-muted-foreground text-sm">Loading...</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </AppLayout>
     );
