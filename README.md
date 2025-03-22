@@ -4,8 +4,6 @@ Just simply copy these files to your project
 
 * customize your very own styling
 
-`resources/js/components/datatable-pagination.tsx`
-
 `resources/js/components/datatable.tsx`
 
 * data endpoint, instance, props definition and many more
