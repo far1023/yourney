@@ -42,7 +42,7 @@ export const columns: ColumnDef<User>[] = [
         accessorKey: 'updated_at',
         header: 'Last update',
         cell: ({ row }) => {
-            const date = row.getValue<string | Date>('updated_at');
+            const date = row.getValue<string | Date>('Last update');
             return moment(date).format('DD MMMM YYYY');
         },
     },
