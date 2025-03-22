@@ -6,8 +6,8 @@ import { type BreadcrumbItem } from '@/types';
 import { DataTableResponse } from '@/types/datatable';
 import { Head } from '@inertiajs/react';
 import { PaginationState } from '@tanstack/react-table';
-import { Loader, ShieldX } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { LoaderCircle, ShieldX } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { toast, Toaster } from 'sonner';
 import { useDebounce } from '../../hooks/use-debounce';
 import { columns, User } from './columns';
@@ -35,6 +35,7 @@ export default function Index() {
     const [data, setData] = useState<User[]>([]);
     const [pageCount, setPageCount] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
+    const prevSearchRef = useRef(searchQuery);
     const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
     const [pagination, setPagination] = useState<PaginationState>({
@@ -69,18 +70,22 @@ export default function Index() {
     };
 
     useEffect(() => {
+        if (prevSearchRef.current !== debouncedSearchQuery) {
+            prevSearchRef.current = debouncedSearchQuery;
+
+            if (pagination.pageIndex !== 0) {
+                setPagination((prev) => ({
+                    ...prev,
+                    pageIndex: 0,
+                }));
+
+                return;
+            }
+        }
+
         const pageIndex = pagination.pageIndex;
         fetchData(pageIndex + 1, debouncedSearchQuery);
     }, [pagination, debouncedSearchQuery]);
-
-    useEffect(() => {
-        if (debouncedSearchQuery !== searchQuery) {
-            setPagination((prev) => ({
-                ...prev,
-                pageIndex: 0,
-            }));
-        }
-    }, [debouncedSearchQuery]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -104,7 +109,7 @@ export default function Index() {
                     {loading && data.length > 0 && (
                         <div className="bg-background/80 absolute inset-0 flex items-center justify-center rounded-md">
                             <div className="flex flex-col items-center space-y-2">
-                                <Loader className="animate-spin" />
+                                <LoaderCircle className="h-4 w-4 animate-spin" />
                                 <p className="text-muted-foreground text-sm">Loading...</p>
                             </div>
                         </div>
