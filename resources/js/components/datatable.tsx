@@ -74,8 +74,8 @@ export function DataTable<TData, TValue>({
 
     return (
         <div className="w-full">
-            <div className="flex items-center py-4">
-                <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between py-4">
+                <div>
                     <Select 
                         value={pagination.pageSize.toString()}
                         onValueChange={(value) => {
@@ -87,7 +87,7 @@ export function DataTable<TData, TValue>({
                             }));
                         }}
                     >
-                        <SelectTrigger className="w-[120px]">
+                        <SelectTrigger className="w-[100px]">
                             <SelectValue placeholder="Page size" />
                         </SelectTrigger>
                         <SelectContent>
@@ -99,20 +99,23 @@ export function DataTable<TData, TValue>({
                             <SelectItem value="50">50 items</SelectItem>
                         </SelectContent>
                     </Select>
-                    <span className="text-muted-foreground text-sm">items per page</span>
                 </div>
-                <div className="relative max-w-sm ml-auto">
-                    <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
-                    <Input
-                        placeholder="Search by name or email..."
-                        value={searchQuery}
-                        onChange={(event) => setSearchQuery(event.target.value)}
-                        className="max-w-sm pl-8"
-                    />
+                
+                <div className="relative max-w-sm mx-4 flex-1 flex justify-center">
+                    <div className="relative w-full max-w-sm">
+                        <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
+                        <Input
+                            placeholder="Search by name or email..."
+                            value={searchQuery}
+                            onChange={(event) => setSearchQuery(event.target.value)}
+                            className="w-full pl-8"
+                        />
+                    </div>
                 </div>
+                
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="ml-3">
+                        <Button variant="outline">
                             Show columns <ChevronDown />
                         </Button>
                     </DropdownMenuTrigger>
@@ -219,44 +222,49 @@ function DataTablePagination({ table }: DataTablePaginationProps) {
     };
 
     return (
-        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-muted-foreground">
+        <div className="mt-4 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground w-[240px]">
                 Showing {startRow} to {endRow} of {totalRows} results
             </div>
             
-            <Pagination>
-                <PaginationContent>
-                    <PaginationItem>
-                        <PaginationPrevious
-                            aria-disabled={!table.getCanPreviousPage()}
-                            className={
-                                !table.getCanPreviousPage() ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
-                            }
-                            onClick={handlePreviousPage}
-                        />
-                    </PaginationItem>
-
-                    {Array.from({ length: pageCount }, (_, i) => i + 1).map((page) => (
-                        <PaginationItem key={page}>
-                            <PaginationLink
-                                className="cursor-pointer"
-                                isActive={pageIndex + 1 === page}
-                                onClick={() => handlePageClick(page)}
-                            >
-                                {page}
-                            </PaginationLink>
+            <div className="flex-1 flex justify-center">
+                <Pagination>
+                    <PaginationContent>
+                        <PaginationItem>
+                            <PaginationPrevious
+                                aria-disabled={!table.getCanPreviousPage()}
+                                className={
+                                    !table.getCanPreviousPage() ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                                }
+                                onClick={handlePreviousPage}
+                            />
                         </PaginationItem>
-                    ))}
 
-                    <PaginationItem>
-                        <PaginationNext
-                            aria-disabled={!table.getCanNextPage()}
-                            className={!table.getCanNextPage() ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
-                            onClick={handleNextPage}
-                        />
-                    </PaginationItem>
-                </PaginationContent>
-            </Pagination>
+                        {Array.from({ length: pageCount }, (_, i) => i + 1).map((page) => (
+                            <PaginationItem key={page}>
+                                <PaginationLink
+                                    className="cursor-pointer"
+                                    isActive={pageIndex + 1 === page}
+                                    onClick={() => handlePageClick(page)}
+                                >
+                                    {page}
+                                </PaginationLink>
+                            </PaginationItem>
+                        ))}
+
+                        <PaginationItem>
+                            <PaginationNext
+                                aria-disabled={!table.getCanNextPage()}
+                                className={!table.getCanNextPage() ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+                                onClick={handleNextPage}
+                            />
+                        </PaginationItem>
+                    </PaginationContent>
+                </Pagination>
+            </div>
+            
+            {/* Empty space for future content on right side */}
+            <div className="w-[240px]"></div>
         </div>
     );
 }
