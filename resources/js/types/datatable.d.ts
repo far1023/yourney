@@ -12,6 +12,8 @@ export type DataTableResponse = {
 export type DataTableProps<TData, TValue> = {
     columns: ColumnDef<TData, TValue>[];
     data: TData[];
+    addButtonText?: string; // Optional text for add button
+    onAddClick?: () => void; // Optional callback for add button
 };
 
 export type DataTablePaginationProps = {

@@ -17,7 +17,7 @@ import {
     useReactTable,
     VisibilityState,
 } from '@tanstack/react-table';
-import { ChevronDown, Search } from 'lucide-react';
+import { ChevronDown, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -49,12 +49,16 @@ export function DataTable<TData, TValue>({
     setPagination,
     searchQuery,
     setSearchQuery,
+    addButtonText = "Add User",
+    onAddClick,
 }: DataTableProps<TData, TValue> & {
     pageCount: number;
     pagination: PaginationState;
     setPagination: OnChangeFn<PaginationState>;
     searchQuery: string;
     setSearchQuery: (value: string) => void;
+    addButtonText?: string;
+    onAddClick?: () => void;
 }) {
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const table = useReactTable({
@@ -113,30 +117,39 @@ export function DataTable<TData, TValue>({
                     </div>
                 </div>
                 
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline">
-                            Show columns <ChevronDown />
+                <div className="flex items-center gap-2">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline">
+                                Show columns <ChevronDown />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {table
+                                .getAllColumns()
+                                .filter((column) => column.getCanHide())
+                                .map((column) => {
+                                    return (
+                                        <DropdownMenuCheckboxItem
+                                            key={column.id}
+                                            className="capitalize"
+                                            checked={column.getIsVisible()}
+                                            onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                                        >
+                                            {column.id}
+                                        </DropdownMenuCheckboxItem>
+                                    );
+                                })}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    
+                    {onAddClick && (
+                        <Button className="gap-1" onClick={onAddClick}>
+                            <Plus className="h-4 w-4" />
+                            {addButtonText}
                         </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        {table
-                            .getAllColumns()
-                            .filter((column) => column.getCanHide())
-                            .map((column) => {
-                                return (
-                                    <DropdownMenuCheckboxItem
-                                        key={column.id}
-                                        className="capitalize"
-                                        checked={column.getIsVisible()}
-                                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                                    >
-                                        {column.id}
-                                    </DropdownMenuCheckboxItem>
-                                );
-                            })}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                    )}
+                </div>
             </div>
             <div className="rounded-md border">
                 <Table>

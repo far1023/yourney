@@ -106,6 +106,14 @@ export default function Index() {
                         setPagination={setPagination}
                         searchQuery={searchQuery}
                         setSearchQuery={setSearchQuery}
+                        addButtonText="Add User"
+                        onAddClick={() => {
+                            // This would typically open a modal or navigate to a user creation page
+                            toast.info('Add User clicked', {
+                                description: 'This would open a user creation form',
+                                duration: 3000,
+                            });
+                        }}
                     />
 
                     {loading && data.length > 0 && (
