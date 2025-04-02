@@ -7,9 +7,9 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { DataTableResponse } from '@/types/datatable';
 import { Head, router } from '@inertiajs/react';
-import { PaginationState, RowSelectionState } from '@tanstack/react-table';
+import { PaginationState, RowSelectionState, SortingState } from '@tanstack/react-table';
 import { LoaderCircle, ShieldX } from 'lucide-react';
-import { useMemo, useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { toast, Toaster } from 'sonner';
 import { useDebounce } from '../../hooks/use-debounce';
 import { columns as baseColumns, User } from './columns';
@@ -22,11 +22,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 async function getData(
-    page: number = 1, 
-    search: string = '', 
+    page: number = 1,
+    search: string = '',
     pageSize: number = 10,
     sortField: string = 'updated_at',
-    sortDirection: string = 'desc'
+    sortDirection: string = 'desc',
 ): Promise<DataTableResponse> {
     const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
     const pageSizeParam = `&per_page=${pageSize}`;
@@ -52,7 +52,7 @@ export default function Index() {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [currentUser, setCurrentUser] = useState<User | undefined>(undefined);
     const [formModalTitle, setFormModalTitle] = useState('Add User');
-    
+
     // Delete confirmation modal state
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<User | undefined>(undefined);
@@ -61,14 +61,19 @@ export default function Index() {
         pageIndex: 0,
         pageSize: 10, // Default page size that matches one of our dropdown options
     });
-    
+
     // Sorting state - default to updated_at desc
-    const [sorting, setSorting] = useState<SortingState>([
-        { id: 'Last update', desc: true }
-    ]);
-    
+    const [sorting, setSorting] = useState<SortingState>([{ id: 'Last update', desc: true }]);
+
     // Row selection state
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+    
+    // Create a ref to hold the table instance for direct manipulation
+    const tableRef = useRef(null);
+
+    // State for delete confirmation modal when deleting multiple users
+    const [isDeleteMultipleModalOpen, setIsDeleteMultipleModalOpen] = useState(false);
+    const [rowsToDelete, setRowsToDelete] = useState<RowSelectionState>({});
 
     const fetchData = async (page: number, search: string, pageSize: number) => {
         setLoading(true);
@@ -77,13 +82,13 @@ export default function Index() {
             // Get the current sort column and direction
             const sortColumn = sorting.length > 0 ? sorting[0].id : 'updated_at';
             const sortDirection = sorting.length > 0 ? (sorting[0].desc ? 'desc' : 'asc') : 'desc';
-            
+
             // Map column id to database field if needed
             let sortField = sortColumn;
             if (sortColumn === 'Last update') {
                 sortField = 'updated_at';
             }
-            
+
             const response = await getData(page, search, pageSize, sortField, sortDirection);
             setData(response.data);
             setPageCount(response.last_page);
@@ -124,7 +129,7 @@ export default function Index() {
         const pageSize = pagination.pageSize;
         fetchData(pageIndex + 1, debouncedSearchQuery, pageSize);
     }, [pagination, debouncedSearchQuery, sorting]); // Added sorting as dependency
-    
+
     // Handle opening modal for adding a new user
     const handleAddUser = () => {
         setCurrentUser(undefined);
@@ -148,7 +153,7 @@ export default function Index() {
     // Handle actual user deletion with Inertia
     const handleDeleteConfirm = async () => {
         if (!userToDelete) return;
-        
+
         return new Promise<void>((resolve) => {
             router.delete(`/api/users/${userToDelete.id}`, {
                 onSuccess: () => {
@@ -156,21 +161,61 @@ export default function Index() {
                         description: 'The user has been removed from the system.',
                         duration: 3000,
                     });
-                    
-                    // Refresh the data
-                    const pageIndex = pagination.pageIndex;
-                    fetchData(pageIndex + 1, debouncedSearchQuery, pagination.pageSize);
-                    
+
+                    // Force a reset to the first page and fetch fresh data
+                    setPagination((prev) => ({
+                        ...prev,
+                        pageIndex: 0,
+                    }));
+
+                    // Add a small delay to ensure state is updated before fetching
+                    setTimeout(() => {
+                        fetchData(1, debouncedSearchQuery, pagination.pageSize);
+                    }, 100);
+
+                    // Clear any row selection
+                    setRowSelection({});
+
                     resolve();
                 },
                 onError: (errors) => {
-                    toast.error('Failed to delete user', {
-                        description: Object.values(errors).join('\n'),
-                        duration: 5000,
-                    });
-                    
+                    // Check if this is a "not found" error
+                    const errorValues = Object.values(errors);
+                    const isNotFoundError = errorValues.some((msg) =>
+                        msg.toString().toLowerCase().includes('not found'),
+                    );
+
+                    if (isNotFoundError) {
+                        toast.error('User not found', {
+                            description: 'This user may have already been deleted. Refreshing data.',
+                            duration: 5000,
+                        });
+
+                        // Force full refresh to sync with database
+                        setPagination((prev) => ({
+                            ...prev,
+                            pageIndex: 0,
+                        }));
+
+                        setTimeout(() => {
+                            fetchData(1, debouncedSearchQuery, pagination.pageSize);
+                        }, 100);
+                    } else {
+                        toast.error('Failed to delete user', {
+                            description: errorValues.join('\n'),
+                            duration: 5000,
+                        });
+                    }
+
+                    // Still clear row selection on error
+                    setRowSelection({});
+
                     resolve();
-                }
+                },
+                onFinish: () => {
+                    // Always close the delete modal
+                    setIsDeleteModalOpen(false);
+                },
             });
         });
     };
@@ -178,12 +223,19 @@ export default function Index() {
     // Handle success toast
     const handleOperationSuccess = (message: string) => {
         toast.success(message, { duration: 3000 });
-        
-        // Refresh the data
-        const pageIndex = pagination.pageIndex;
-        fetchData(pageIndex + 1, debouncedSearchQuery, pagination.pageSize);
+
+        // Force a reset to the first page for fresh data
+        setPagination((prev) => ({
+            ...prev,
+            pageIndex: 0,
+        }));
+
+        // Add a small delay to ensure state is updated before fetching
+        setTimeout(() => {
+            fetchData(1, debouncedSearchQuery, pagination.pageSize);
+        }, 100);
     };
-    
+
     // Handle error toast
     const handleOperationError = (message: string) => {
         toast.error('Operation failed', {
@@ -192,18 +244,143 @@ export default function Index() {
         });
     };
 
+    // Handler for the delete selected button
+    const handleDeleteSelected = (selectedRows: RowSelectionState) => {
+        setRowsToDelete(selectedRows);
+        setIsDeleteMultipleModalOpen(true);
+    };
+
+    // Handler for confirming multiple delete
+    const handleConfirmMultipleDelete = async () => {
+        // Get the actual database IDs of the selected rows, not just the row indices
+        const selectedRowIndices = Object.keys(rowsToDelete);
+        const selectedUserIds = selectedRowIndices
+            .map((index) => {
+                // Convert string index to integer to access data array directly
+                const rowIndex = parseInt(index);
+                // Access the user data at that index
+                const user = data[rowIndex];
+                console.log(`Row index ${rowIndex} maps to user:`, user);
+                return user?.id; // Return the actual database ID
+            })
+            .filter((id) => id !== undefined) as string[]; // Filter out any undefined IDs
+
+        const count = selectedUserIds.length;
+
+        if (count === 0) return;
+
+        // Close the modal first to prevent double-clicks
+        setIsDeleteMultipleModalOpen(false);
+
+        // Track progress with a toast
+        const progressToastId = toast.loading(`Deleting ${count} users...`);
+
+        // Log the selected IDs for debugging
+        console.log('Row indices from rowsToDelete:', selectedRowIndices);
+        console.log('Data array length:', data.length);
+        console.log('First few items in data array:', data.slice(0, 3));
+        console.log('Mapped user IDs for deletion:', selectedUserIds);
+        
+        // Dump the entire data structure for debugging
+        console.log('Full data array with all user objects:', JSON.stringify(data));
+
+        try {
+            // Use fetch directly instead of Inertia router
+            const response = await fetch('/api/users/batch-delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN':
+                        document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify({ ids: selectedUserIds }),
+            });
+
+            // Parse the JSON response
+            const responseData = await response.json();
+            console.log('Batch delete response:', responseData);
+
+            const deleted = responseData.deleted || 0;
+            const failed = responseData.failed || 0;
+            const errors = responseData.errors || [];
+
+            // Dismiss progress toast
+            toast.dismiss(progressToastId);
+
+            // Show success toast if any users were deleted
+            if (deleted > 0) {
+                toast.success(`Successfully deleted ${deleted} users`, {
+                    duration: 3000,
+                });
+            }
+
+            // Show error toast if any deletions failed
+            if (failed > 0) {
+                // Create a more user-friendly error message
+                const errorMessage =
+                    errors.length > 0
+                        ? `Some users could not be deleted: ${errors.join('. ')}`
+                        : `Failed to delete ${failed} users`;
+
+                toast.error(`Failed to delete ${failed} users`, {
+                    description: errorMessage,
+                    duration: 5000,
+                });
+
+                // Log detailed error information for debugging
+                console.warn('Deletion errors:', errors);
+            }
+
+            // Reset all checkboxes properly using the table instance
+            if (tableRef.current) {
+                // Use the table instance to properly clear all row selections
+                tableRef.current.toggleAllRowsSelected(false);
+            }
+            setRowSelection({});
+            
+            // Fetch updated data after deletion is complete
+            // Reset to first page in case deleted items affect pagination
+            fetchData(1, debouncedSearchQuery, pagination.pageSize);
+        } catch (error) {
+            console.error('Batch delete error:', error);
+
+            // Dismiss progress toast
+            toast.dismiss(progressToastId);
+            
+            // Even on error, reset selection to clear checkboxes
+            if (tableRef.current) {
+                // Use the table instance to properly clear all row selections
+                tableRef.current.toggleAllRowsSelected(false);
+            }
+            setRowSelection({});
+            
+            // Refresh data
+            fetchData(pagination.pageIndex + 1, debouncedSearchQuery, pagination.pageSize);
+
+            // Show error toast
+            toast.error('Failed to delete users', {
+                description: error instanceof Error ? error.message : 'Unknown error',
+                duration: 5000,
+            });
+
+            // Reset row selection
+            setRowSelection({});
+        }
+    };
+
     // Memoize columns to avoid unnecessary re-renders
     const columns = useMemo(() => {
         // Add handlers to the actions column
-        return baseColumns.map(column => {
+        return baseColumns.map((column) => {
             if (column.id === 'actions') {
                 return {
                     ...column,
                     meta: {
                         ...column.meta,
                         onEdit: handleEditUser,
-                        onDelete: handleDeleteClick // Changed to show the delete modal
-                    }
+                        onDelete: handleDeleteClick, // Changed to show the delete modal
+                    },
                 };
             }
             return column;
@@ -233,6 +410,8 @@ export default function Index() {
                         onSortingChange={setSorting}
                         initialRowSelection={rowSelection}
                         onRowSelectionChange={setRowSelection}
+                        onDeleteSelected={handleDeleteSelected}
+                        tableRef={tableRef}
                     />
 
                     {/* User Form Modal */}
@@ -244,18 +423,28 @@ export default function Index() {
                         user={currentUser}
                         title={formModalTitle}
                     />
-                    
+
                     {/* Delete Confirmation Modal */}
+                    {/* Delete single user confirmation modal */}
                     <DeleteConfirmationModal
                         isOpen={isDeleteModalOpen}
                         onClose={() => setIsDeleteModalOpen(false)}
                         onConfirm={handleDeleteConfirm}
                         title="Delete User"
                         description={
-                            userToDelete 
-                                ? `Are you sure you want to delete ${userToDelete.name}? This action cannot be undone.` 
-                                : "Are you sure you want to delete this user? This action cannot be undone."
+                            userToDelete
+                                ? `Are you sure you want to delete ${userToDelete.name}? This action cannot be undone.`
+                                : 'Are you sure you want to delete this user? This action cannot be undone.'
                         }
+                    />
+
+                    {/* Delete multiple users confirmation modal */}
+                    <DeleteConfirmationModal
+                        isOpen={isDeleteMultipleModalOpen}
+                        onClose={() => setIsDeleteMultipleModalOpen(false)}
+                        onConfirm={handleConfirmMultipleDelete}
+                        title="Delete Selected Users"
+                        description={`Are you sure you want to delete ${Object.keys(rowsToDelete).length} selected users? This action cannot be undone.`}
                     />
 
                     {loading && data.length > 0 && (

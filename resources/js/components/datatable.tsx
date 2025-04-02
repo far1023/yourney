@@ -20,7 +20,7 @@ import {
     useReactTable,
     VisibilityState,
 } from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, ChevronDown, Plus, Search } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, Plus, Search, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
@@ -59,6 +59,8 @@ export function DataTable<TData, TValue>({
     initialSorting = [],
     onRowSelectionChange,
     initialRowSelection = {},
+    onDeleteSelected,
+    tableRef, // Add table reference to expose table instance
 }: DataTableProps<TData, TValue> & {
     pageCount: number;
     pagination: PaginationState;
@@ -71,6 +73,8 @@ export function DataTable<TData, TValue>({
     initialSorting?: SortingState;
     onRowSelectionChange?: OnChangeFn<RowSelectionState>;
     initialRowSelection?: RowSelectionState;
+    onDeleteSelected?: (selectedRows: RowSelectionState) => void;
+    tableRef?: React.MutableRefObject<any>; // Add optional table ref for external control
 }) {
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [sorting, setSorting] = useState<SortingState>(initialSorting);
@@ -118,6 +122,11 @@ export function DataTable<TData, TValue>({
         enableRowSelection: true,
         enableMultiRowSelection: true,
     });
+    
+    // If tableRef is provided, expose the table instance
+    if (tableRef) {
+        tableRef.current = table;
+    }
 
     return (
         <div className="w-full">
@@ -161,6 +170,19 @@ export function DataTable<TData, TValue>({
                 </div>
                 
                 <div className="flex items-center gap-2">
+                    {/* Delete selected rows button */}
+                    {Object.keys(table.getState().rowSelection || {}).length > 0 && (
+                        <Button 
+                            variant="destructive" 
+                            size="sm"
+                            className="gap-1 mr-2"
+                            onClick={() => onDeleteSelected?.(table.getState().rowSelection)}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Delete {Object.keys(table.getState().rowSelection || {}).length} selected
+                        </Button>
+                    )}
+                    
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline">

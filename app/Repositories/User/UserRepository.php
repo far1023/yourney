@@ -93,11 +93,46 @@ class UserRepository implements UserRepositoryInterface
     }
     
     /**
+     * Find a user by ID
+     */
+    public function findById($id)
+    {
+        return $this->model->find($id);
+    }
+    
+    /**
      * Delete a user
      */
     public function delete($id): bool
     {
-        $user = $this->model->findOrFail($id);
-        return $user->delete();
+        try {
+            // Log deletion attempt
+            \Log::info("UserRepository: Attempting to delete user with ID: {$id}");
+            
+            // Find the user
+            $user = $this->model->find($id);
+            
+            // Log whether user was found
+            if (!$user) {
+                \Log::warning("UserRepository: User with ID {$id} not found");
+                return false;
+            }
+            
+            // Attempt deletion
+            $result = $user->delete();
+            
+            // Log result
+            \Log::info("UserRepository: User with ID {$id} deletion result: " . ($result ? 'success' : 'failed'));
+            
+            // Track the actual SQL query
+            \Log::info("UserRepository: Last executed query", [
+                'query' => \DB::getQueryLog()[count(\DB::getQueryLog()) - 1] ?? 'No query'
+            ]);
+            
+            return $result;
+        } catch (\Exception $e) {
+            \Log::error("UserRepository: Exception during delete of user {$id}: " . $e->getMessage());
+            throw $e;
+        }
     }
 }
