@@ -30,6 +30,9 @@ class UserRepository implements UserRepositoryInterface
             });
         }
 
+        // Order by updated_at desc to show the most recently updated users at the top
+        $query->orderBy('updated_at', 'desc');
+
         $users = $query->paginate($perPage);
 
         $startNumber = ($currentPage - 1) * $perPage + 1;
@@ -47,5 +50,46 @@ class UserRepository implements UserRepositoryInterface
             'email' => $request->email,
             'password' => Hash::make($request->password),
         ]);
+    }
+    
+    /**
+     * Create a new user
+     */
+    public function create(array $data): User
+    {
+        // Generate a random password if not provided
+        if (!isset($data['password'])) {
+            $data['password'] = Hash::make(\Illuminate\Support\Str::random(10));
+        } else {
+            $data['password'] = Hash::make($data['password']);
+        }
+        
+        return $this->model->create($data);
+    }
+    
+    /**
+     * Update an existing user
+     */
+    public function update($id, array $data): User
+    {
+        $user = $this->model->findOrFail($id);
+        
+        // Only hash password if it's provided
+        if (isset($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        }
+        
+        $user->update($data);
+        
+        return $user;
+    }
+    
+    /**
+     * Delete a user
+     */
+    public function delete($id): bool
+    {
+        $user = $this->model->findOrFail($id);
+        return $user->delete();
     }
 }

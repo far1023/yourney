@@ -16,7 +16,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('user-list', function () {
         return Inertia::render('users/index');
     })->name('users.list');
-    Route::get('users', [UserController::class, 'userDataTable'])->name('users.datatable');
+    
+    // User API endpoints - Using API middleware for proper response handling
+    Route::prefix('api')->group(function() {
+        Route::get('users', [UserController::class, 'userDataTable'])->name('users.datatable');
+        Route::post('users', [UserController::class, 'store'])->name('users.store');
+        Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    });
 
     Route::get('phpinfo', function () {
         return dd(phpinfo());

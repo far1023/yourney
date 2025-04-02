@@ -46,15 +46,24 @@ export const columns: ColumnDef<User>[] = [
         meta: {
             align: 'right',
         },
-        cell: ({ row }) => {
+        cell: ({ row, column }) => {
             const user = row.original;
+
+            // These functions will be defined in the parent component and passed via column meta
+            const onEdit = column.columnDef.meta?.onEdit;
+            const onDelete = column.columnDef.meta?.onDelete;
 
             return (
                 <div className="flex justify-end gap-2">
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8"
+                                    onClick={() => onEdit?.(user)}
+                                >
                                     <span className="sr-only">Edit user</span>
                                     <Edit className="h-4 w-4 text-blue-500" />
                                 </Button>
@@ -68,7 +77,12 @@ export const columns: ColumnDef<User>[] = [
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8"
+                                    onClick={() => onDelete?.(user)}
+                                >
                                     <span className="sr-only">Delete user</span>
                                     <Trash2 className="h-4 w-4 text-red-500" />
                                 </Button>

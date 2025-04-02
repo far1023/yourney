@@ -23,5 +23,7 @@ export type DataTablePaginationProps = {
 declare module '@tanstack/react-table' {
     interface ColumnMeta<TData extends unknown, TValue> {
         align?: 'left' | 'center' | 'right';
+        onEdit?: (data: TData) => void;
+        onDelete?: (data: TData) => void;
     }
 }
