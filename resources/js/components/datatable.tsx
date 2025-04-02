@@ -11,13 +11,15 @@ import {
     flexRender,
     getCoreRowModel,
     getPaginationRowModel,
+    getSortedRowModel,
     OnChangeFn,
     PaginationState,
+    SortingState,
     Table as reactTable,
     useReactTable,
     VisibilityState,
 } from '@tanstack/react-table';
-import { ChevronDown, Plus, Search } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -51,6 +53,8 @@ export function DataTable<TData, TValue>({
     setSearchQuery,
     addButtonText = "Add User",
     onAddClick,
+    onSortingChange,
+    initialSorting = [],
 }: DataTableProps<TData, TValue> & {
     pageCount: number;
     pagination: PaginationState;
@@ -59,21 +63,40 @@ export function DataTable<TData, TValue>({
     setSearchQuery: (value: string) => void;
     addButtonText?: string;
     onAddClick?: () => void;
+    onSortingChange?: OnChangeFn<SortingState>;
+    initialSorting?: SortingState;
 }) {
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+    const [sorting, setSorting] = useState<SortingState>(initialSorting);
+    
+    // Handle sorting changes - either use external handler or local state
+    const handleSortingChange: OnChangeFn<SortingState> = (updater) => {
+        const newSorting = typeof updater === 'function' ? updater(sorting) : updater;
+        setSorting(newSorting);
+        if (onSortingChange) {
+            onSortingChange(newSorting);
+        }
+    };
+    
     const table = useReactTable({
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
+        getSortedRowModel: getSortedRowModel(),
         manualPagination: true,
+        manualSorting: !!onSortingChange, // Manual sorting if external handler is provided
         pageCount,
         state: {
             pagination,
             columnVisibility,
+            sorting,
         },
         onPaginationChange: setPagination,
         onColumnVisibilityChange: setColumnVisibility,
+        onSortingChange: handleSortingChange,
+        enableSorting: true,
+        enableMultiSort: false,
     });
 
     return (
@@ -157,19 +180,39 @@ export function DataTable<TData, TValue>({
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => {
+                                    // Get if the column is sortable
+                                    const isSortable = header.column.getCanSort();
+                                    // Get the current sort direction
+                                    const sorted = header.column.getIsSorted();
+                                    
                                     return (
                                         <TableHead
                                             key={header.id}
                                             style={{
                                                 width: header.getSize() !== 150 ? header.getSize() : undefined,
                                             }}
-                                            className={
+                                            className={`${
                                                 header.column.columnDef.meta?.align === 'right'
                                                     ? 'text-right'
-                                                    : undefined
-                                            }
+                                                    : ''
+                                            } ${isSortable ? 'cursor-pointer select-none' : ''}`}
+                                            onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
                                         >
-                                            {flexRender(header.column.columnDef.header, header.getContext())}
+                                            <div className="flex items-center gap-1">
+                                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                                
+                                                {isSortable && (
+                                                    <div className="ml-1 flex h-4 w-4 items-center justify-center">
+                                                        {sorted === 'asc' ? (
+                                                            <ArrowUp className="h-3 w-3" />
+                                                        ) : sorted === 'desc' ? (
+                                                            <ArrowDown className="h-3 w-3" />
+                                                        ) : (
+                                                            <div className="h-3 w-3 text-transparent">·</div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </TableHead>
                                     );
                                 })}

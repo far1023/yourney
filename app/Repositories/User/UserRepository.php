@@ -22,6 +22,19 @@ class UserRepository implements UserRepositoryInterface
         $perPage = $validatedQueryParams->perPage ?? 10;
         $currentPage = request()->page ?? 1;
         $search = request()->search ?? '';
+        $sort = request()->sort ?? 'updated_at';
+        $direction = request()->direction ?? 'desc';
+
+        // Validate sort field (whitelist approach for security)
+        $allowedSortFields = ['name', 'email', 'created_at', 'updated_at'];
+        if (!in_array($sort, $allowedSortFields)) {
+            $sort = 'updated_at';
+        }
+
+        // Validate direction
+        if (!in_array($direction, ['asc', 'desc'])) {
+            $direction = 'desc';
+        }
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -30,8 +43,8 @@ class UserRepository implements UserRepositoryInterface
             });
         }
 
-        // Order by updated_at desc to show the most recently updated users at the top
-        $query->orderBy('updated_at', 'desc');
+        // Apply sorting
+        $query->orderBy($sort, $direction);
 
         $users = $query->paginate($perPage);
 

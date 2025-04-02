@@ -21,10 +21,17 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-async function getData(page: number = 1, search: string = '', pageSize: number = 10): Promise<DataTableResponse> {
+async function getData(
+    page: number = 1, 
+    search: string = '', 
+    pageSize: number = 10,
+    sortField: string = 'updated_at',
+    sortDirection: string = 'desc'
+): Promise<DataTableResponse> {
     const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
     const pageSizeParam = `&per_page=${pageSize}`;
-    const response = await fetch(`/api/users?page=${page}${searchParam}${pageSizeParam}`);
+    const sortParam = `&sort=${sortField}&direction=${sortDirection}`;
+    const response = await fetch(`/api/users?page=${page}${searchParam}${pageSizeParam}${sortParam}`);
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -54,12 +61,27 @@ export default function Index() {
         pageIndex: 0,
         pageSize: 10, // Default page size that matches one of our dropdown options
     });
+    
+    // Sorting state - default to updated_at desc
+    const [sorting, setSorting] = useState<SortingState>([
+        { id: 'Last update', desc: true }
+    ]);
 
     const fetchData = async (page: number, search: string, pageSize: number) => {
         setLoading(true);
 
         try {
-            const response = await getData(page, search, pageSize);
+            // Get the current sort column and direction
+            const sortColumn = sorting.length > 0 ? sorting[0].id : 'updated_at';
+            const sortDirection = sorting.length > 0 ? (sorting[0].desc ? 'desc' : 'asc') : 'desc';
+            
+            // Map column id to database field if needed
+            let sortField = sortColumn;
+            if (sortColumn === 'Last update') {
+                sortField = 'updated_at';
+            }
+            
+            const response = await getData(page, search, pageSize, sortField, sortDirection);
             setData(response.data);
             setPageCount(response.last_page);
         } catch (err) {
@@ -98,7 +120,7 @@ export default function Index() {
         const pageIndex = pagination.pageIndex;
         const pageSize = pagination.pageSize;
         fetchData(pageIndex + 1, debouncedSearchQuery, pageSize);
-    }, [pagination, debouncedSearchQuery]);
+    }, [pagination, debouncedSearchQuery, sorting]); // Added sorting as dependency
     
     // Handle opening modal for adding a new user
     const handleAddUser = () => {
@@ -204,6 +226,8 @@ export default function Index() {
                         setSearchQuery={setSearchQuery}
                         addButtonText="Add User"
                         onAddClick={handleAddUser}
+                        initialSorting={sorting}
+                        onSortingChange={setSorting}
                     />
 
                     {/* User Form Modal */}

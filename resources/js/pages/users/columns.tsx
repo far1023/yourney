@@ -23,19 +23,24 @@ export const columns: ColumnDef<User>[] = [
         size: 60,
         enableResizing: false,
         enableHiding: false,
+        enableSorting: false, // No sorting for row number
     },
     {
         accessorKey: 'name',
         header: 'Fullname',
+        enableSorting: true,
     },
     {
         accessorKey: 'email',
         header: 'Email',
+        enableSorting: true,
     },
     {
         id: 'Last update',
         accessorKey: 'updated_at',
         header: 'Last update',
+        enableSorting: true,
+        sortingFn: 'datetime',
         cell: ({ row }) => {
             const date = row.getValue<string | Date>('Last update');
             return moment(date).format('DD MMMM YYYY');
@@ -46,6 +51,7 @@ export const columns: ColumnDef<User>[] = [
         meta: {
             align: 'right',
         },
+        enableSorting: false,
         cell: ({ row, column }) => {
             const user = row.original;
 
