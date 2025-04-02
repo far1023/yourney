@@ -19,9 +19,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-async function getData(page: number = 1, search: string = ''): Promise<DataTableResponse> {
+async function getData(page: number = 1, search: string = '', pageSize: number = 10): Promise<DataTableResponse> {
     const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
-    const response = await fetch(`/users?page=${page}${searchParam}`);
+    const pageSizeParam = `&per_page=${pageSize}`;
+    const response = await fetch(`/users?page=${page}${searchParam}${pageSizeParam}`);
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -40,14 +41,14 @@ export default function Index() {
 
     const [pagination, setPagination] = useState<PaginationState>({
         pageIndex: 0,
-        pageSize: 10,
+        pageSize: 10, // Default page size that matches one of our dropdown options
     });
 
-    const fetchData = async (page: number, search: string) => {
+    const fetchData = async (page: number, search: string, pageSize: number) => {
         setLoading(true);
 
         try {
-            const response = await getData(page, search);
+            const response = await getData(page, search, pageSize);
             setData(response.data);
             setPageCount(response.last_page);
         } catch (err) {
@@ -84,7 +85,8 @@ export default function Index() {
         }
 
         const pageIndex = pagination.pageIndex;
-        fetchData(pageIndex + 1, debouncedSearchQuery);
+        const pageSize = pagination.pageSize;
+        fetchData(pageIndex + 1, debouncedSearchQuery, pageSize);
     }, [pagination, debouncedSearchQuery]);
 
     return (
