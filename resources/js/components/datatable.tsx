@@ -14,6 +14,7 @@ import {
     getSortedRowModel,
     OnChangeFn,
     PaginationState,
+    RowSelectionState,
     SortingState,
     Table as reactTable,
     useReactTable,
@@ -22,6 +23,7 @@ import {
 import { ArrowDown, ArrowUp, ChevronDown, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './ui/button';
+import { Checkbox } from './ui/checkbox';
 import { Input } from './ui/input';
 import {
     Pagination,
@@ -55,6 +57,8 @@ export function DataTable<TData, TValue>({
     onAddClick,
     onSortingChange,
     initialSorting = [],
+    onRowSelectionChange,
+    initialRowSelection = {},
 }: DataTableProps<TData, TValue> & {
     pageCount: number;
     pagination: PaginationState;
@@ -65,9 +69,12 @@ export function DataTable<TData, TValue>({
     onAddClick?: () => void;
     onSortingChange?: OnChangeFn<SortingState>;
     initialSorting?: SortingState;
+    onRowSelectionChange?: OnChangeFn<RowSelectionState>;
+    initialRowSelection?: RowSelectionState;
 }) {
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [sorting, setSorting] = useState<SortingState>(initialSorting);
+    const [rowSelection, setRowSelection] = useState<RowSelectionState>(initialRowSelection);
     
     // Handle sorting changes - either use external handler or local state
     const handleSortingChange: OnChangeFn<SortingState> = (updater) => {
@@ -75,6 +82,15 @@ export function DataTable<TData, TValue>({
         setSorting(newSorting);
         if (onSortingChange) {
             onSortingChange(newSorting);
+        }
+    };
+    
+    // Handle row selection changes
+    const handleRowSelectionChange: OnChangeFn<RowSelectionState> = (updater) => {
+        const newSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
+        setRowSelection(newSelection);
+        if (onRowSelectionChange) {
+            onRowSelectionChange(newSelection);
         }
     };
     
@@ -91,12 +107,16 @@ export function DataTable<TData, TValue>({
             pagination,
             columnVisibility,
             sorting,
+            rowSelection,
         },
         onPaginationChange: setPagination,
         onColumnVisibilityChange: setColumnVisibility,
         onSortingChange: handleSortingChange,
+        onRowSelectionChange: handleRowSelectionChange,
         enableSorting: true,
         enableMultiSort: false,
+        enableRowSelection: true,
+        enableMultiRowSelection: true,
     });
 
     return (
@@ -260,6 +280,9 @@ function DataTablePagination({ table }: DataTablePaginationProps) {
     const totalRows = pageCount * pageSize; // This is an estimate
     const startRow = pageIndex * pageSize + 1;
     const endRow = Math.min((pageIndex + 1) * pageSize, totalRows);
+    
+    // Get information about selected rows
+    const selectedRowCount = Object.keys(table.getState().rowSelection || {}).length;
 
     const handlePreviousPage = () => {
         if (table.getCanPreviousPage()) {
@@ -280,7 +303,13 @@ function DataTablePagination({ table }: DataTablePaginationProps) {
     return (
         <div className="mt-4 flex items-center justify-between">
             <div className="text-sm text-muted-foreground w-[240px]">
-                Showing {startRow} to {endRow} of {totalRows} results
+                {selectedRowCount > 0 ? (
+                    <span className="font-medium text-primary">
+                        {selectedRowCount} {selectedRowCount === 1 ? 'row' : 'rows'} selected
+                    </span>
+                ) : (
+                    <span>Showing {startRow} to {endRow} of {totalRows} results</span>
+                )}
             </div>
             
             <div className="flex-1 flex justify-center">
@@ -319,8 +348,14 @@ function DataTablePagination({ table }: DataTablePaginationProps) {
                 </Pagination>
             </div>
             
-            {/* Empty space for future content on right side */}
-            <div className="w-[240px]"></div>
+            {/* Action buttons for selected rows */}
+            <div className="w-[240px] flex justify-end">
+                {selectedRowCount > 0 && (
+                    <Button variant="outline" size="sm" onClick={() => table.resetRowSelection()}>
+                        Clear Selection
+                    </Button>
+                )}
+            </div>
         </div>
     );
 }

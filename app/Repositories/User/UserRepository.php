@@ -48,11 +48,6 @@ class UserRepository implements UserRepositoryInterface
 
         $users = $query->paginate($perPage);
 
-        $startNumber = ($currentPage - 1) * $perPage + 1;
-        foreach ($users->items() as $index => $user) {
-            $user->row_number = $startNumber + $index . ".";
-        }
-
         return $users;
     }
 

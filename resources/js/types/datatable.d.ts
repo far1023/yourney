@@ -1,5 +1,5 @@
 import '@tanstack/react-table';
-import { ColumnDef, OnChangeFn, SortingState } from '@tanstack/react-table';
+import { ColumnDef, OnChangeFn, RowSelectionState, SortingState } from '@tanstack/react-table';
 
 export type DataTableResponse = {
     current_page: number;
@@ -16,6 +16,8 @@ export type DataTableProps<TData, TValue> = {
     onAddClick?: () => void; // Optional callback for add button
     initialSorting?: SortingState; // Optional initial sorting state
     onSortingChange?: OnChangeFn<SortingState>; // Optional callback for sorting changes
+    initialRowSelection?: RowSelectionState; // Optional initial row selection state
+    onRowSelectionChange?: OnChangeFn<RowSelectionState>; // Optional callback for row selection changes
 };
 
 export type DataTablePaginationProps = {

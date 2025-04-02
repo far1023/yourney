@@ -3,6 +3,7 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { Edit, Trash2 } from 'lucide-react';
 import moment from 'moment';
+import { IndeterminateCheckbox } from '@/components/ui/indeterminate-checkbox';
 
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -18,12 +19,39 @@ export type User = {
 
 export const columns: ColumnDef<User>[] = [
     {
-        accessorKey: 'row_number',
-        header: '#',
-        size: 60,
-        enableResizing: false,
+        id: 'select',
+        header: ({ table }) => (
+            <div className="flex h-full w-full items-center justify-center">
+                <IndeterminateCheckbox
+                    checked={table.getIsAllPageRowsSelected()}
+                    onCheckedChange={(value) => {
+                        // If checkbox is currently checked (all rows selected) 
+                        // or has indeterminate state (some rows selected)
+                        // then clicking it should deselect all rows
+                        if (table.getIsAllPageRowsSelected() || table.getIsSomePageRowsSelected()) {
+                            table.toggleAllPageRowsSelected(false);
+                        } else {
+                            // If no rows are selected, select all rows
+                            table.toggleAllPageRowsSelected(true);
+                        }
+                    }}
+                    aria-label="Select all"
+                    indeterminate={!table.getIsAllPageRowsSelected() && table.getIsSomePageRowsSelected()}
+                />
+            </div>
+        ),
+        cell: ({ row }) => (
+            <div className="flex h-full w-full items-center justify-center">
+                <IndeterminateCheckbox
+                    checked={row.getIsSelected()}
+                    onCheckedChange={(value) => row.toggleSelected(!!value)}
+                    aria-label="Select row"
+                />
+            </div>
+        ),
+        enableSorting: false,
         enableHiding: false,
-        enableSorting: false, // No sorting for row number
+        size: 40,
     },
     {
         accessorKey: 'name',

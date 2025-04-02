@@ -7,7 +7,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { DataTableResponse } from '@/types/datatable';
 import { Head, router } from '@inertiajs/react';
-import { PaginationState } from '@tanstack/react-table';
+import { PaginationState, RowSelectionState } from '@tanstack/react-table';
 import { LoaderCircle, ShieldX } from 'lucide-react';
 import { useMemo, useEffect, useRef, useState } from 'react';
 import { toast, Toaster } from 'sonner';
@@ -66,6 +66,9 @@ export default function Index() {
     const [sorting, setSorting] = useState<SortingState>([
         { id: 'Last update', desc: true }
     ]);
+    
+    // Row selection state
+    const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
     const fetchData = async (page: number, search: string, pageSize: number) => {
         setLoading(true);
@@ -228,6 +231,8 @@ export default function Index() {
                         onAddClick={handleAddUser}
                         initialSorting={sorting}
                         onSortingChange={setSorting}
+                        initialRowSelection={rowSelection}
+                        onRowSelectionChange={setRowSelection}
                     />
 
                     {/* User Form Modal */}
