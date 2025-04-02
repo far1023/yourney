@@ -20,7 +20,7 @@ import {
     useReactTable,
     VisibilityState,
 } from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, ChevronDown, Plus, Search, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, Download, FileDown, Plus, Search, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
@@ -182,6 +182,70 @@ export function DataTable<TData, TValue>({
                             Delete {Object.keys(table.getState().rowSelection || {}).length} selected
                         </Button>
                     )}
+                    
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="mr-2 gap-1"
+                        onClick={() => {
+                            // Get all rows' data (either just visible rows or all rows)
+                            const dataToExport = data;
+                            
+                            // Get visible columns (excluding the select/checkbox column)
+                            const visibleColumns = table.getAllColumns()
+                                .filter(column => column.getIsVisible() && column.id !== 'select' && column.id !== 'actions');
+                            
+                            // Create CSV header row
+                            const headers = visibleColumns.map(column => {
+                                // Use header display text or column ID
+                                return column.columnDef.header?.toString() || column.id;
+                            });
+                            
+                            // Create CSV rows for each data item
+                            const rows = dataToExport.map(item => {
+                                return visibleColumns.map(column => {
+                                    // Access the data using the column's ID or accessorKey
+                                    const accessor = column.id;
+                                    let value;
+                                    
+                                    // Special handling for the "Last update" column which uses updated_at
+                                    if (accessor === 'Last update') {
+                                        // @ts-ignore - Get the updated_at field directly
+                                        value = item['updated_at'];
+                                        // Format date for CSV
+                                        if (value) {
+                                            value = new Date(value).toLocaleString();
+                                        }
+                                    } else {
+                                        // @ts-ignore - Standard accessor for other columns
+                                        value = item[accessor];
+                                    }
+                                    // Format the value for CSV
+                                    return value !== null && value !== undefined ? 
+                                        typeof value === 'object' ? JSON.stringify(value) : String(value) : '';
+                                });
+                            });
+                            
+                            // Combine headers and rows
+                            const csvContent = [headers, ...rows]
+                                .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+                                .join('\n');
+                            
+                            // Create and download the CSV file
+                            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.setAttribute('href', url);
+                            link.setAttribute('download', 'table-export.csv');
+                            link.style.visibility = 'hidden';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        }}
+                    >
+                        <FileDown className="h-4 w-4" />
+                        Export CSV
+                    </Button>
                     
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
