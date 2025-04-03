@@ -44,6 +44,7 @@ export default function Index() {
 
     const [data, setData] = useState<User[]>([]);
     const [pageCount, setPageCount] = useState(0);
+    const [totalCount, setTotalCount] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
     const prevSearchRef = useRef(searchQuery);
     const debouncedSearchQuery = useDebounce(searchQuery, 500);
@@ -92,6 +93,8 @@ export default function Index() {
             const response = await getData(page, search, pageSize, sortField, sortDirection);
             setData(response.data);
             setPageCount(response.last_page);
+            // Store total count from response for accurate count display
+            setTotalCount(response.total);
         } catch (err) {
             let errorMessage = 'An unknown error occurred';
             if (err instanceof Error) {
@@ -412,6 +415,7 @@ export default function Index() {
                         onRowSelectionChange={setRowSelection}
                         onDeleteSelected={handleDeleteSelected}
                         tableRef={tableRef}
+                        totalCount={totalCount}
                     />
 
                     {/* User Form Modal */}

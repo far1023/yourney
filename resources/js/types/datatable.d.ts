@@ -21,6 +21,7 @@ export type DataTableProps<TData, TValue> = {
     onRowSelectionChange?: OnChangeFn<RowSelectionState>; // Optional callback for row selection changes
     onDeleteSelected?: (selectedRows: RowSelectionState) => void; // Optional callback for deleting selected rows
     tableRef?: React.MutableRefObject<any>; // Optional ref to access the table instance
+    totalCount?: number; // Actual total count of records from the server
 };
 
 export type DataTablePaginationProps = {

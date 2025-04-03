@@ -43,6 +43,7 @@ import {
 
 interface DataTablePaginationProps {
     table: reactTable<any>;
+    actualTotal?: number; // Actual total count from the server
 }
 
 export function DataTable<TData, TValue>({
@@ -61,6 +62,7 @@ export function DataTable<TData, TValue>({
     initialRowSelection = {},
     onDeleteSelected,
     tableRef, // Add table reference to expose table instance
+    totalCount, // Add total count from API response
 }: DataTableProps<TData, TValue> & {
     pageCount: number;
     pagination: PaginationState;
@@ -75,6 +77,7 @@ export function DataTable<TData, TValue>({
     initialRowSelection?: RowSelectionState;
     onDeleteSelected?: (selectedRows: RowSelectionState) => void;
     tableRef?: React.MutableRefObject<any>; // Add optional table ref for external control
+    totalCount?: number; // The actual total count of records from the server
 }) {
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [sorting, setSorting] = useState<SortingState>(initialSorting);
@@ -131,7 +134,8 @@ export function DataTable<TData, TValue>({
     return (
         <div className="w-full">
             <div className="flex items-center justify-between py-4">
-                <div>
+                <div className="flex items-center space-x-4">
+                    {/* Page size selector */}
                     <Select 
                         value={pagination.pageSize.toString()}
                         onValueChange={(value) => {
@@ -155,16 +159,15 @@ export function DataTable<TData, TValue>({
                             <SelectItem value="50">50 items</SelectItem>
                         </SelectContent>
                     </Select>
-                </div>
-                
-                <div className="relative max-w-sm mx-4 flex-1 flex justify-center">
-                    <div className="relative w-full max-w-sm">
+                    
+                    {/* Search input - moved to left, reduced width */}
+                    <div className="relative">
                         <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
                         <Input
                             placeholder="Search by name or email..."
                             value={searchQuery}
                             onChange={(event) => setSearchQuery(event.target.value)}
-                            className="w-full pl-8"
+                            className="w-[200px] pl-8"
                         />
                     </div>
                 </div>
@@ -186,7 +189,7 @@ export function DataTable<TData, TValue>({
                     <Button
                         variant="outline"
                         size="sm"
-                        className="mr-2 gap-1"
+                        className="mr-2 gap-1 font-normal"
                         onClick={() => {
                             // Get all rows' data (either just visible rows or all rows)
                             const dataToExport = data;
@@ -249,7 +252,7 @@ export function DataTable<TData, TValue>({
                     
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline">
+                            <Button variant="outline" className="font-normal">
                                 Show columns <ChevronDown />
                             </Button>
                         </DropdownMenuTrigger>
@@ -273,7 +276,7 @@ export function DataTable<TData, TValue>({
                     </DropdownMenu>
                     
                     {onAddClick && (
-                        <Button className="gap-1" onClick={onAddClick}>
+                        <Button className="gap-1 font-medium" onClick={onAddClick}>
                             <Plus className="h-4 w-4" />
                             {addButtonText}
                         </Button>
@@ -353,19 +356,22 @@ export function DataTable<TData, TValue>({
                     </TableBody>
                 </Table>
             </div>
-            <DataTablePagination table={table} />
+            <DataTablePagination table={table} actualTotal={totalCount} />
         </div>
     );
 }
 
-function DataTablePagination({ table }: DataTablePaginationProps) {
+function DataTablePagination({ table, actualTotal }: DataTablePaginationProps) {
     const { pageIndex, pageSize } = table.getState().pagination;
     const pageCount = table.getPageCount();
-    // Since we're using manual pagination, we need to access the table's original data length
-    // from the props if available, otherwise use an estimate from page count
-    const totalRows = pageCount * pageSize; // This is an estimate
-    const startRow = pageIndex * pageSize + 1;
-    const endRow = Math.min((pageIndex + 1) * pageSize, totalRows);
+    
+    // Use the actual total from server if provided, otherwise estimate
+    const totalRows = actualTotal !== undefined ? actualTotal : pageCount * pageSize;
+    
+    // Calculate the actual range of visible rows
+    const rowCount = table.getRowModel().rows.length;
+    const startRow = rowCount === 0 ? 0 : pageIndex * pageSize + 1;
+    const endRow = startRow + rowCount - 1;
     
     // Get information about selected rows
     const selectedRowCount = Object.keys(table.getState().rowSelection || {}).length;
