@@ -12,6 +12,9 @@ export type User = {
     id: string;
     name: string;
     email: string;
+    email_verified_at: string | null;
+    password: string;
+    remember_token: string | null;
     created_at: string;
     updated_at: string;
     row_number?: number;
@@ -50,13 +53,25 @@ export const columns: ColumnDef<User>[] = [
             </div>
         ),
         enableSorting: false,
-        enableHiding: false,
+        enableHiding: false, // Cannot hide the select column
         size: 40,
     },
+    // ID column - hidden by default
+    {
+        accessorKey: 'id',
+        header: 'ID',
+        enableSorting: true,
+        enableHiding: true,
+        size: 80,
+        // Initially hidden
+        enableColumnFilter: true,
+    },
+    // Name column - visible by default
     {
         accessorKey: 'name',
-        header: 'Fullname',
+        header: 'Name',
         enableSorting: true,
+        enableHiding: true, // Can be hidden from column selector
         cell: ({ row, getValue, column, table }) => {
             // Access the cell's value
             const initialValue = getValue() as string;
@@ -91,19 +106,86 @@ export const columns: ColumnDef<User>[] = [
             );
         },
     },
+    // Email column - visible by default
     {
         accessorKey: 'email',
         header: 'Email',
         enableSorting: true,
+        enableHiding: true, // Can be hidden from column selector
     },
+    // Created At column - hidden by default
     {
-        id: 'Last update',
-        accessorKey: 'updated_at',
-        header: 'Last update',
+        id: 'Created at',
+        accessorKey: 'created_at',
+        header: 'Created at',
         enableSorting: true,
+        enableHiding: true, // Can be hidden from column selector
         sortingFn: 'datetime',
         cell: ({ row }) => {
-            const date = row.getValue<string | Date>('Last update');
+            const date = row.getValue<string | Date>('Created at');
+            return moment(date).format('DD MMMM YYYY');
+        },
+    },
+    // Email Verified At column - hidden by default
+    {
+        accessorKey: 'email_verified_at',
+        header: 'Verified at',
+        enableSorting: true,
+        enableHiding: true,
+        sortingFn: 'datetime',
+        cell: ({ row }) => {
+            const date = row.getValue<string | Date | null>('email_verified_at');
+            return date ? moment(date).format('DD MMMM YYYY HH:mm') : 'Not verified';
+        },
+    },
+    
+    // Password column (hashed) - hidden by default, limited display
+    {
+        accessorKey: 'password',
+        header: 'Password Hash',
+        enableSorting: false,
+        enableHiding: true,
+        cell: () => {
+            return '••••••••'; // Always show dots for security
+        },
+    },
+    
+    // Remember Token column - hidden by default
+    {
+        accessorKey: 'remember_token',
+        header: 'Remember Token',
+        enableSorting: false,
+        enableHiding: true,
+        cell: ({ row }) => {
+            const token = row.getValue<string | null>('remember_token');
+            return token ? '••••••••' : 'None'; // Always show dots for security if exists
+        },
+    },
+    
+    // Created At column - hidden by default
+    {
+        id: 'Created at',
+        accessorKey: 'created_at',
+        header: 'Created at',
+        enableSorting: true,
+        enableHiding: true, // Can be hidden from column selector
+        sortingFn: 'datetime',
+        cell: ({ row }) => {
+            const date = row.getValue<string | Date>('Created at');
+            return moment(date).format('DD MMMM YYYY');
+        },
+    },
+    
+    // Updated At column - visible by default
+    {
+        id: 'Updated at',
+        accessorKey: 'updated_at',
+        header: 'Updated at',
+        enableSorting: true,
+        enableHiding: true, // Can be hidden from column selector
+        sortingFn: 'datetime',
+        cell: ({ row }) => {
+            const date = row.getValue<string | Date>('Updated at');
             return moment(date).format('DD MMMM YYYY');
         },
     },

@@ -64,7 +64,7 @@ export default function Index() {
     });
 
     // Sorting state - default to updated_at desc
-    const [sorting, setSorting] = useState<SortingState>([{ id: 'Last update', desc: true }]);
+    const [sorting, setSorting] = useState<SortingState>([{ id: 'Updated at', desc: true }]);
 
     // Row selection state
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -86,7 +86,7 @@ export default function Index() {
 
             // Map column id to database field if needed
             let sortField = sortColumn;
-            if (sortColumn === 'Last update') {
+            if (sortColumn === 'Updated at') {
                 sortField = 'updated_at';
             }
 

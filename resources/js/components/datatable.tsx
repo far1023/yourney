@@ -79,7 +79,17 @@ export function DataTable<TData, TValue>({
     tableRef?: React.MutableRefObject<any>; // Add optional table ref for external control
     totalCount?: number; // The actual total count of records from the server
 }) {
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+        // By default, hide these columns
+        'id': false,
+        'Created at': false,
+        'email_verified_at': false,
+        'password': false,
+        'remember_token': false,
+        // Also update the column ID for the Last update column
+        'Last update': undefined, // Remove any old ID
+        'Updated at': true // Show the Updated at column
+    });
     const [sorting, setSorting] = useState<SortingState>(initialSorting);
     const [rowSelection, setRowSelection] = useState<RowSelectionState>(initialRowSelection);
     
