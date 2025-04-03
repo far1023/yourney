@@ -113,19 +113,6 @@ export const columns: ColumnDef<User>[] = [
         enableSorting: true,
         enableHiding: true, // Can be hidden from column selector
     },
-    // Created At column - hidden by default
-    {
-        id: 'Created at',
-        accessorKey: 'created_at',
-        header: 'Created at',
-        enableSorting: true,
-        enableHiding: true, // Can be hidden from column selector
-        sortingFn: 'datetime',
-        cell: ({ row }) => {
-            const date = row.getValue<string | Date>('Created at');
-            return moment(date).format('DD MMMM YYYY');
-        },
-    },
     // Email Verified At column - hidden by default
     {
         accessorKey: 'email_verified_at',
@@ -172,7 +159,7 @@ export const columns: ColumnDef<User>[] = [
         sortingFn: 'datetime',
         cell: ({ row }) => {
             const date = row.getValue<string | Date>('Created at');
-            return moment(date).format('DD MMMM YYYY');
+            return date ? moment(date).format('DD MMMM YYYY') : '';
         },
     },
     
@@ -186,7 +173,7 @@ export const columns: ColumnDef<User>[] = [
         sortingFn: 'datetime',
         cell: ({ row }) => {
             const date = row.getValue<string | Date>('Updated at');
-            return moment(date).format('DD MMMM YYYY');
+            return date ? moment(date).format('DD MMMM YYYY') : '';
         },
     },
     {
