@@ -33,5 +33,8 @@ declare module '@tanstack/react-table' {
         align?: 'left' | 'center' | 'right';
         onEdit?: (data: TData) => void;
         onDelete?: (data: TData) => void;
+        // For editable cells
+        updateData?: (rowId: string | number, value: any) => void;
+        onCellBlur?: (rowId: string | number, value: any) => void;
     }
 }

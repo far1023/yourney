@@ -57,6 +57,39 @@ export const columns: ColumnDef<User>[] = [
         accessorKey: 'name',
         header: 'Fullname',
         enableSorting: true,
+        cell: ({ row, getValue, column, table }) => {
+            // Access the cell's value
+            const initialValue = getValue() as string;
+            
+            // For inline editing, we can use the meta property to store edit state
+            return (
+                <div
+                    className="w-full h-full px-1 py-1 focus-within:ring-2 focus-within:ring-primary/20 rounded"
+                    data-editable-cell
+                >
+                    <input
+                        className="w-full bg-transparent focus:outline-none"
+                        value={initialValue}
+                        onChange={e => {
+                            // Get column meta info for the update handler
+                            const updateData = column.columnDef.meta?.updateData;
+                            
+                            // If an update handler is provided, call it with row ID and new value
+                            if (updateData) {
+                                updateData(row.original.id, e.target.value);
+                            }
+                        }}
+                        onBlur={e => {
+                            // Similar handling for blur event (when user is done editing)
+                            const onCellBlur = column.columnDef.meta?.onCellBlur;
+                            if (onCellBlur && e.target.value !== initialValue) {
+                                onCellBlur(row.original.id, e.target.value);
+                            }
+                        }}
+                    />
+                </div>
+            );
+        },
     },
     {
         accessorKey: 'email',

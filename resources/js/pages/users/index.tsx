@@ -372,23 +372,86 @@ export default function Index() {
         }
     };
 
+    // Handle inline name update
+    const handleNameUpdate = useCallback(async (userId: string | number, newName: string) => {
+        // Optimistically update the local data
+        setData(prev => 
+            prev.map(user => 
+                user.id === userId ? { ...user, name: newName } : user
+            )
+        );
+    }, []);
+    
+    // Handle blur event (when user finishes editing) - save to database
+    const handleNameBlur = useCallback(async (userId: string | number, newName: string) => {
+        try {
+            // Show a loading toast
+            const toastId = toast.loading(`Updating user name...`);
+            
+            // Send update to server
+            await router.put(`/api/users/${userId}`, {
+                name: newName
+            }, {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    // Update toast on success
+                    toast.success(`Name updated successfully`, {
+                        id: toastId,
+                        duration: 2000
+                    });
+                },
+                onError: (errors) => {
+                    // Show error and revert to original name
+                    toast.error(`Update failed: ${Object.values(errors).join(", ")}`, {
+                        id: toastId,
+                        duration: 3000
+                    });
+                    
+                    // Refresh data to revert changes
+                    fetchData(pagination.pageIndex + 1, debouncedSearchQuery, pagination.pageSize);
+                }
+            });
+        } catch (error) {
+            console.error('Error updating name:', error);
+            toast.error(`Failed to update name`);
+            
+            // Refresh data to revert changes
+            fetchData(pagination.pageIndex + 1, debouncedSearchQuery, pagination.pageSize);
+        }
+    }, [pagination.pageIndex, pagination.pageSize, debouncedSearchQuery]);
+    
     // Memoize columns to avoid unnecessary re-renders
     const columns = useMemo(() => {
-        // Add handlers to the actions column
+        // Add handlers to all columns that need them
         return baseColumns.map((column) => {
+            // Add handlers to action column
             if (column.id === 'actions') {
                 return {
                     ...column,
                     meta: {
                         ...column.meta,
                         onEdit: handleEditUser,
-                        onDelete: handleDeleteClick, // Changed to show the delete modal
+                        onDelete: handleDeleteClick,
                     },
                 };
             }
+            
+            // Add handlers to name column for inline editing
+            if (column.accessorKey === 'name') {
+                return {
+                    ...column,
+                    meta: {
+                        ...column.meta,
+                        updateData: handleNameUpdate, // For real-time update
+                        onCellBlur: handleNameBlur,   // For saving to server
+                    },
+                };
+            }
+            
             return column;
         });
-    }, []);
+    }, [handleNameUpdate, handleNameBlur]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
