@@ -7,9 +7,9 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { DataTableResponse } from '@/types/datatable';
 import { Head, router } from '@inertiajs/react';
-import { PaginationState, RowSelectionState, SortingState } from '@tanstack/react-table';
+import { PaginationState, RowSelectionState, SortingState, Table } from '@tanstack/react-table';
 import { LoaderCircle, ShieldX } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast, Toaster } from 'sonner';
 import { useDebounce } from '../../hooks/use-debounce';
 import { columns as baseColumns, User } from './columns';
@@ -68,9 +68,9 @@ export default function Index() {
 
     // Row selection state
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-    
+
     // Create a ref to hold the table instance for direct manipulation
-    const tableRef = useRef(null);
+    const tableRef = useRef<Table<User> | null>(null);
 
     // State for delete confirmation modal when deleting multiple users
     const [isDeleteMultipleModalOpen, setIsDeleteMultipleModalOpen] = useState(false);
@@ -283,7 +283,7 @@ export default function Index() {
         console.log('Data array length:', data.length);
         console.log('First few items in data array:', data.slice(0, 3));
         console.log('Mapped user IDs for deletion:', selectedUserIds);
-        
+
         // Dump the entire data structure for debugging
         console.log('Full data array with all user objects:', JSON.stringify(data));
 
@@ -341,7 +341,7 @@ export default function Index() {
                 tableRef.current.toggleAllRowsSelected(false);
             }
             setRowSelection({});
-            
+
             // Fetch updated data after deletion is complete
             // Reset to first page in case deleted items affect pagination
             fetchData(1, debouncedSearchQuery, pagination.pageSize);
@@ -350,14 +350,14 @@ export default function Index() {
 
             // Dismiss progress toast
             toast.dismiss(progressToastId);
-            
+
             // Even on error, reset selection to clear checkboxes
             if (tableRef.current) {
                 // Use the table instance to properly clear all row selections
                 tableRef.current.toggleAllRowsSelected(false);
             }
             setRowSelection({});
-            
+
             // Refresh data
             fetchData(pagination.pageIndex + 1, debouncedSearchQuery, pagination.pageSize);
 
@@ -375,52 +375,55 @@ export default function Index() {
     // Handle inline name update
     const handleNameUpdate = useCallback(async (userId: string | number, newName: string) => {
         // Optimistically update the local data
-        setData(prev => 
-            prev.map(user => 
-                user.id === userId ? { ...user, name: newName } : user
-            )
-        );
+        setData((prev) => prev.map((user) => (user.id === userId ? { ...user, name: newName } : user)));
     }, []);
-    
+
     // Handle blur event (when user finishes editing) - save to database
-    const handleNameBlur = useCallback(async (userId: string | number, newName: string) => {
-        try {
-            // Show a loading toast
-            const toastId = toast.loading(`Updating user name...`);
-            
-            // Send update to server
-            await router.put(`/api/users/${userId}`, {
-                name: newName
-            }, {
-                preserveScroll: true,
-                preserveState: true,
-                onSuccess: () => {
-                    // Update toast on success
-                    toast.success(`Name updated successfully`, {
-                        id: toastId,
-                        duration: 2000
-                    });
-                },
-                onError: (errors) => {
-                    // Show error and revert to original name
-                    toast.error(`Update failed: ${Object.values(errors).join(", ")}`, {
-                        id: toastId,
-                        duration: 3000
-                    });
-                    
-                    // Refresh data to revert changes
-                    fetchData(pagination.pageIndex + 1, debouncedSearchQuery, pagination.pageSize);
-                }
-            });
-        } catch (error) {
-            console.error('Error updating name:', error);
-            toast.error(`Failed to update name`);
-            
-            // Refresh data to revert changes
-            fetchData(pagination.pageIndex + 1, debouncedSearchQuery, pagination.pageSize);
-        }
-    }, [pagination.pageIndex, pagination.pageSize, debouncedSearchQuery]);
-    
+    const handleNameBlur = useCallback(
+        async (userId: string | number, newName: string) => {
+            try {
+                // Show a loading toast
+                const toastId = toast.loading(`Updating user name...`);
+
+                // Send update to server
+                await router.put(
+                    `/api/users/${userId}`,
+                    {
+                        name: newName,
+                    },
+                    {
+                        preserveScroll: true,
+                        preserveState: true,
+                        onSuccess: () => {
+                            // Update toast on success
+                            toast.success(`Name updated successfully`, {
+                                id: toastId,
+                                duration: 2000,
+                            });
+                        },
+                        onError: (errors) => {
+                            // Show error and revert to original name
+                            toast.error(`Update failed: ${Object.values(errors).join(', ')}`, {
+                                id: toastId,
+                                duration: 3000,
+                            });
+
+                            // Refresh data to revert changes
+                            fetchData(pagination.pageIndex + 1, debouncedSearchQuery, pagination.pageSize);
+                        },
+                    },
+                );
+            } catch (error) {
+                console.error('Error updating name:', error);
+                toast.error(`Failed to update name`);
+
+                // Refresh data to revert changes
+                fetchData(pagination.pageIndex + 1, debouncedSearchQuery, pagination.pageSize);
+            }
+        },
+        [pagination.pageIndex, pagination.pageSize, debouncedSearchQuery],
+    );
+
     // Memoize columns to avoid unnecessary re-renders
     const columns = useMemo(() => {
         // Add handlers to all columns that need them
@@ -436,19 +439,20 @@ export default function Index() {
                     },
                 };
             }
-            
+
             // Add handlers to name column for inline editing
-            if (column.accessorKey === 'name') {
+            // Use 'accessorKey' in column to type-check properly
+            if ('accessorKey' in column && column.accessorKey === 'name') {
                 return {
                     ...column,
                     meta: {
                         ...column.meta,
                         updateData: handleNameUpdate, // For real-time update
-                        onCellBlur: handleNameBlur,   // For saving to server
+                        onCellBlur: handleNameBlur, // For saving to server
                     },
                 };
             }
-            
+
             return column;
         });
     }, [handleNameUpdate, handleNameBlur]);
