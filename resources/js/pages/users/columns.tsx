@@ -11,6 +11,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useState } from 'react';
 
 export type User = {
     id: string;
@@ -21,7 +22,24 @@ export type User = {
     row_number?: number;
 };
 
-export const columns: ColumnDef<User>[] = [
+export function useUserDrawer() {
+    const [isOpen, setIsOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+    const openDrawer = (user: User) => {
+        setSelectedUser(user);
+        setIsOpen(true);
+    };
+
+    return {
+        isOpen,
+        setIsOpen,
+        selectedUser,
+        openDrawer,
+    };
+}
+
+export const tableColumns = (drawerState: ReturnType<typeof useUserDrawer>): ColumnDef<User>[] => [
     {
         accessorKey: 'row_number',
         header: '#',
@@ -63,8 +81,9 @@ export const columns: ColumnDef<User>[] = [
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem>View customer</DropdownMenuItem>
-                        <DropdownMenuItem>View user details</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => drawerState.openDrawer(user)}>
+                            View user details
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             );

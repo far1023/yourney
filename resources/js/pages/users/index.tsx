@@ -1,5 +1,6 @@
 import { DataTable } from '@/components/datatable';
 import HeadingSmall from '@/components/heading-small';
+import { UserDrawer } from '@/components/user/user-detail-drawer';
 import { useAppearance } from '@/hooks/use-appearance';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -10,7 +11,7 @@ import { LoaderCircle, ShieldX } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast, Toaster } from 'sonner';
 import { useDebounce } from '../../hooks/use-debounce';
-import { columns, User } from './columns';
+import { tableColumns, User, useUserDrawer } from './columns';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -32,6 +33,9 @@ export default function Index() {
     const [loading, setLoading] = useState(true);
     const { appearance } = useAppearance();
 
+    const drawerState = useUserDrawer();
+
+    const columns = tableColumns(drawerState);
     const [data, setData] = useState<User[]>([]);
     const [pageCount, setPageCount] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
@@ -116,6 +120,12 @@ export default function Index() {
                     )}
                 </div>
             </div>
+
+            <UserDrawer
+                isOpen={drawerState.isOpen}
+                onOpenChange={drawerState.setIsOpen}
+                user={drawerState.selectedUser}
+            />
         </AppLayout>
     );
 }
