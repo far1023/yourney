@@ -24,7 +24,7 @@ export function UserDrawer({ isOpen, onOpenChange, user }: UserDrawerProps) {
 
     return (
         <Drawer open={isOpen} onOpenChange={onOpenChange} direction="right">
-            <DrawerContent>
+            <DrawerContent aria-describedby={undefined}>
                 <div className="mx-auto w-full max-w-md">
                     <DrawerHeader className="pt-10">
                         <DrawerTitle className="text-center">User Details</DrawerTitle>
